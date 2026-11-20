@@ -36,7 +36,7 @@ Blood Connect matches by **blood-type compatibility + distance + donor eligibili
 Requirements: .NET 10 SDK and SQL Server LocalDB (installed with Visual Studio) or any SQL Server (edit the connection string).
 
 ```bash
-git clone https://github.com/sadfsga/BloodConnect.git
+git clone https://github.com/samuelbahaa/BloodConnect.git
 cd BloodConnect
 
 # secret JWT signing key (kept outside the repo)
