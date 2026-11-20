@@ -1,0 +1,60 @@
+@host = https://localhost:7000
+@token = PASTE_TOKEN_HERE
+
+### Register
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Ahmed Ali",
+  "email": "ahmed@example.com",
+  "password": "Passw0rd!123",
+  "phone": "+201001234567",
+  "city": "Cairo",
+  "bloodType": "OPositive",
+  "latitude": 30.0444,
+  "longitude": 31.2357
+}
+
+### Login (copy the token from the response)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "ahmed@example.com", "password": "Passw0rd!123" }
+
+### My profile
+GET {{host}}/api/profile/me
+Authorization: Bearer {{token}}
+
+### Create a blood request
+POST {{host}}/api/requests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "patientName": "Mona Hassan",
+  "bloodType": "ONegative",
+  "unitsNeeded": 2,
+  "hospital": "Kasr Al Ainy Hospital",
+  "city": "Cairo",
+  "latitude": 30.0305,
+  "longitude": 31.2284,
+  "urgency": "Critical",
+  "contactPhone": "+201112223334",
+  "notes": "Surgery tomorrow morning"
+}
+
+### Nearby open requests I can help
+GET {{host}}/api/requests?lat=30.04&lng=31.23&radiusKm=25&compatibleWithMe=true
+Authorization: Bearer {{token}}
+
+### Pledge to request 1
+POST {{host}}/api/requests/1/pledge
+Authorization: Bearer {{token}}
+
+### Confirm a donation (owner only)
+POST {{host}}/api/requests/1/pledges/1/confirm
+Authorization: Bearer {{token}}
+
+### Public stats
+GET {{host}}/api/stats

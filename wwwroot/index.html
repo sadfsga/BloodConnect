@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blood Connect</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#0a0a0c; --bg2:#121217; --card:#16161d; --line:#26262f; --text:#f4f4f6; --mute:#9a9aa8;
+  --red:#ff3b4e; --red2:#ff7a59; --green:#34d399; --amber:#fbbf24; --radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background:radial-gradient(600px 400px at 80% -5%,rgba(255,59,78,.18),transparent 70%),radial-gradient(500px 400px at -5% 40%,rgba(255,122,89,.08),transparent 70%)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.hidden{display:none!important}
+
+/* nav */
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(10,10,12,.7);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em;font-size:1.15rem;cursor:pointer}
+.logo i{width:26px;height:26px;display:inline-block;background:linear-gradient(135deg,var(--red),var(--red2));border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 0 22px rgba(255,59,78,.6);animation:beat 1.8s ease-in-out infinite}
+@keyframes beat{0%,100%{transform:rotate(-45deg) scale(1)}12%{transform:rotate(-45deg) scale(1.18)}24%{transform:rotate(-45deg) scale(1)}36%{transform:rotate(-45deg) scale(1.12)}}
+.nav-r{display:flex;gap:10px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--card);padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:600;font-size:.92rem;transition:.2s}
+.btn:hover{border-color:#44444f;transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(135deg,var(--red),var(--red2));border:0;color:#fff;box-shadow:0 8px 24px rgba(255,59,78,.35)}
+.btn.primary:hover{box-shadow:0 10px 30px rgba(255,59,78,.5)}
+.btn.sm{padding:7px 14px;font-size:.82rem}
+.btn.danger{color:#ff8a95;border-color:rgba(255,59,78,.4)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* hero */
+.hero{padding:90px 0 60px;display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:center}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;font-size:.8rem;color:var(--mute);border:1px solid var(--line);padding:6px 14px;border-radius:999px;background:var(--bg2)}
+.eyebrow b{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.35}}
+h1{font-size:clamp(2.6rem,6.5vw,5rem);line-height:1;letter-spacing:-.045em;margin:20px 0}
+h1 em{font-style:normal;background:linear-gradient(120deg,var(--red),var(--red2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:var(--mute);font-size:1.15rem;max-width:540px}
+.cta{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap}
+.drop-art{position:relative;aspect-ratio:1;display:grid;place-items:center}
+.drop-art .d{width:46%;aspect-ratio:1;background:linear-gradient(135deg,var(--red),#b3122a);border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 0 90px rgba(255,59,78,.55);animation:beat 2.2s ease-in-out infinite}
+.drop-art .ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,59,78,.3);animation:ring 3.2s linear infinite}
+.drop-art .ring:nth-child(2){animation-delay:1.06s}.drop-art .ring:nth-child(3){animation-delay:2.12s}
+@keyframes ring{from{transform:scale(.45);opacity:.9}to{transform:scale(1.05);opacity:0}}
+.drop-art span{position:absolute;font-weight:800;font-size:1.6rem;color:#fff;transform:none}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:10px 0 70px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.stat b{display:block;font-size:2.2rem;letter-spacing:-.03em}
+.stat small{color:var(--mute)}
+h2{font-size:clamp(1.7rem,3.5vw,2.4rem);letter-spacing:-.03em;margin-bottom:8px}
+.sub{color:var(--mute);margin-bottom:28px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:70px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;transition:.25s}
+.step:hover{transform:translateY(-4px);border-color:rgba(255,59,78,.45)}
+.step .n{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(255,59,78,.14);color:var(--red);font-weight:800;margin-bottom:14px}
+.step p{color:var(--mute);font-size:.95rem;margin-top:6px}
+footer{border-top:1px solid var(--line);padding:30px 0;color:var(--mute);font-size:.88rem;text-align:center}
+
+/* app */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:18px 0;scrollbar-width:none}
+.tab{white-space:nowrap;padding:9px 18px;border-radius:999px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--mute);font-weight:600}
+.tab.on{background:var(--card);border-color:var(--line);color:var(--text)}
+.panel{padding-bottom:60px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.bar label{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:.88rem}
+input,select,textarea{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;outline:none;transition:.2s}
+input:focus,select:focus,textarea:focus{border-color:var(--red)}
+.bar select,.bar input{width:auto}
+input[type=checkbox]{width:auto;accent-color:var(--red)}
+.split{display:grid;grid-template-columns:420px 1fr;gap:16px;height:640px}
+#map,#pickMap{border-radius:var(--radius);border:1px solid var(--line);min-height:300px}
+.list{overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}
+.rc{display:grid;grid-template-columns:64px 1fr;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;cursor:pointer;transition:.2s;text-align:left;width:100%}
+.rc:hover{border-color:rgba(255,59,78,.5);transform:translateX(2px)}
+.bt{width:64px;height:64px;border-radius:16px;display:grid;place-items:center;font-weight:800;font-size:1.35rem;background:rgba(255,59,78,.12);color:var(--red);border:1px solid rgba(255,59,78,.3)}
+.rc.Critical .bt{background:var(--red);color:#fff;box-shadow:0 0 24px rgba(255,59,78,.5);animation:glow 1.6s infinite}
+@keyframes glow{50%{box-shadow:0 0 6px rgba(255,59,78,.2)}}
+.rc h4{font-size:1rem}
+.meta{color:var(--mute);font-size:.84rem;display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+.chip{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:700;border:1px solid var(--line)}
+.chip.Critical{color:#ff8a95;border-color:rgba(255,59,78,.5);background:rgba(255,59,78,.1)}
+.chip.Urgent{color:var(--amber);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+.chip.Normal{color:var(--mute)}
+.chip.ok{color:var(--green);border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+.prog{height:5px;background:var(--line);border-radius:9px;margin-top:8px;overflow:hidden}
+.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red2))}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form .full{grid-column:1/-1}
+.form label{display:block;font-size:.82rem;color:var(--mute);margin-bottom:5px}
+.empty{color:var(--mute);text-align:center;padding:50px 10px;border:1px dashed var(--line);border-radius:var(--radius)}
+.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.7)}
+.leaflet-container{background:#0d0d11;position:relative;z-index:0}
+.pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;border:2px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.pin span{transform:rotate(45deg);font-size:10px;font-weight:800;color:#fff}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);display:grid;place-items:center;padding:16px;overflow-y:auto}
+.box{background:var(--bg2);border:1px solid var(--line);border-radius:22px;padding:28px;width:100%;max-width:520px;position:relative;animation:pop .25s ease;max-height:92vh;overflow-y:auto}
+@keyframes pop{from{transform:translateY(16px) scale(.97);opacity:0}}
+.x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--card);cursor:pointer}
+.box h3{font-size:1.4rem;margin-bottom:4px;letter-spacing:-.02em}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:8px 12px;margin:16px 0;font-size:.92rem}
+.kv dt{color:var(--mute)}
+.pl{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:.9rem}
+.tabs2{display:flex;gap:6px;margin-bottom:18px;background:var(--card);padding:4px;border-radius:999px}
+.tabs2 button{flex:1;border:0;background:transparent;padding:9px;border-radius:999px;cursor:pointer;font-weight:600;color:var(--mute)}
+.tabs2 button.on{background:var(--bg);color:var(--text)}
+#toasts{position:fixed;bottom:20px;right:20px;z-index:6000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--green);padding:12px 16px;border-radius:12px;animation:pop .25s;max-width:340px}
+.toast.err{border-left-color:var(--red)}
+.hint{color:var(--mute);font-size:.82rem;margin-top:6px}
+.reveal{opacity:0;transform:translateY(22px);transition:.7s}
+.reveal.in{opacity:1;transform:none}
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;padding-top:50px}.drop-art{max-width:280px;margin:auto}
+  .stats{grid-template-columns:1fr 1fr}.steps{grid-template-columns:1fr}
+  .split{grid-template-columns:1fr;height:auto}#map{height:340px}.list{max-height:480px}
+  .form{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <div class="logo" onclick="goHome()"><i></i>Blood Connect</div>
+  <div class="nav-r" id="navR"></div>
+</div></nav>
+
+<!-- ========== LANDING ========== -->
+<main id="landing">
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <span class="eyebrow"><b></b> Live blood requests, matched by distance</span>
+        <h1>Every drop,<br><em>right on time.</em></h1>
+        <p class="lead">When someone needs blood, minutes matter. Blood Connect finds donors who are <b>compatible</b>, <b>nearby</b> and <b>eligible</b> — so requests stop getting lost in group chats.</p>
+        <div class="cta">
+          <button class="btn primary" onclick="openAuth('register')">Become a donor</button>
+          <button class="btn" onclick="openAuth('login')">Sign in</button>
+        </div>
+      </div>
+      <div class="drop-art"><div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="d"></div></div>
+    </section>
+
+    <section class="stats" id="stats">
+      <div class="stat"><b data-k="openRequests">0</b><small>Open requests</small></div>
+      <div class="stat"><b data-k="fulfilledRequests">0</b><small>Requests fulfilled</small></div>
+      <div class="stat"><b data-k="registeredDonors">0</b><small>Registered donors</small></div>
+      <div class="stat"><b data-k="confirmedDonations">0</b><small>Confirmed donations</small></div>
+    </section>
+
+    <section class="reveal">
+      <h2>How it works</h2><p class="sub">Three steps. No scrolling through hundreds of posts.</p>
+      <div class="steps">
+        <div class="step"><div class="n">1</div><h4>Ask for blood</h4><p>Post the blood type, units, hospital and urgency. The patient's name stays private.</p></div>
+        <div class="step"><div class="n">2</div><h4>Smart matching</h4><p>Only donors with a compatible type, within range, who waited 56 days since their last donation can see it.</p></div>
+        <div class="step"><div class="n">3</div><h4>Pledge &amp; confirm</h4><p>A donor pledges, the requester confirms the donation, and the request closes when enough units arrive.</p></div>
+      </div>
+    </section>
+  </div>
+  <footer>Built by Samuel Bahaa · ASP.NET Core · EF Core · JWT</footer>
+</main>
+
+<!-- ========== APP ========== -->
+<main id="app" class="hidden">
+  <div class="wrap">
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-t="nearby">Nearby</button>
+      <button class="tab" data-t="create">Request blood</button>
+      <button class="tab" data-t="mine">My requests</button>
+      <button class="tab" data-t="pledges">My pledges</button>
+      <button class="tab" data-t="profile">Profile</button>
+    </div>
+
+    <section class="panel" id="p-nearby">
+      <div class="bar">
+        <label><input type="checkbox" id="fCompat" checked> Only what I can donate to</label>
+        <label>Radius <select id="fRadius"><option>5</option><option>10</option><option selected>25</option><option>50</option><option>100</option></select> km</label>
+        <label>Type <select id="fType"><option value="">Any</option></select></label>
+        <button class="btn sm" id="fReload">Refresh</button>
+        <span class="hint" id="nearInfo"></span>
+      </div>
+      <div class="split">
+        <div class="list" id="nearList"></div>
+        <div id="map"></div>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="p-create">
+      <div class="card" style="max-width:860px">
+        <h2>Request blood</h2><p class="sub">Click the map to set the hospital location.</p>
+        <form class="form" id="createForm">
+          <div><label>Patient name (private)</label><input name="patientName" required minlength="2"></div>
+          <div><label>Blood type needed</label><select name="bloodType" id="cType" required></select></div>
+          <div><label>Units needed (1–10)</label><input name="unitsNeeded" type="number" min="1" max="10" value="1" required></div>
+          <div><label>Urgency</label><select name="urgency"><option>Normal</option><option>Urgent</option><option>Critical</option></select></div>
+          <div><label>Hospital</label><input name="hospital" required minlength="2"></div>
+          <div><label>City</label><input name="city" required minlength="2"></div>
+          <div><label>Contact phone</label><input name="contactPhone" required></div>
+          <div><label>Needed by (optional)</label><input name="neededBy" type="datetime-local"></div>
+          <div class="full"><label>Notes (optional)</label><textarea name="notes" rows="2" maxlength="500"></textarea></div>
+          <div class="full"><label>Location <span id="pickInfo" class="hint"></span></label><div id="pickMap" style="height:260px"></div></div>
+          <div class="full"><button class="btn primary" id="createBtn">Post request</button></div>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="p-mine"><div class="grid2" id="mineList"></div></section>
+    <section class="panel hidden" id="p-pledges"><div class="grid2" id="pledgeList"></div></section>
+
+    <section class="panel hidden" id="p-profile">
+      <div class="card" style="max-width:720px">
+        <h2>Your profile</h2><p class="sub" id="eligLine"></p>
+        <form class="form" id="profileForm">
+          <div><label>Full name</label><input name="fullName" required></div>
+          <div><label>Phone</label><input name="phone" required></div>
+          <div><label>City</label><input name="city" required></div>
+          <div><label>Blood type</label><select name="bloodType" id="pType"></select></div>
+          <div><label>Latitude</label><input name="latitude" type="number" step="any"></div>
+          <div><label>Longitude</label><input name="longitude" type="number" step="any"></div>
+          <div class="full"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="isAvailableToDonate"> I'm available to donate</label></div>
+          <div class="full" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button type="button" class="btn" id="geoBtn">Use my current location</button>
+            <button class="btn primary">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="modalRoot"></div>
+<div id="toasts"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+"use strict";
+/* ---------- helpers ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+// Escape everything that comes from users before putting it into HTML (prevents XSS).
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TYPES = {APositive:"A+",ANegative:"A-",BPositive:"B+",BNegative:"B-",ABPositive:"AB+",ABNegative:"AB-",OPositive:"O+",ONegative:"O-"};
+const CAIRO = {lat:30.0444, lng:31.2357};
+const store = {
+  get(k){ try{return localStorage.getItem(k)}catch{return null} },
+  set(k,v){ try{localStorage.setItem(k,v)}catch{} },
+  del(k){ try{localStorage.removeItem(k)}catch{} }
+};
+let token = store.get("bc_token");
+let me = null;
+let map = null, markers = [], pickMap = null, pickMarker = null, pick = null;
+
+function toast(msg, err=false){
+  const t = document.createElement("div");
+  t.className = "toast" + (err ? " err" : "");
+  t.textContent = msg;
+  $("#toasts").appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+
+async function api(path, opts={}){
+  const headers = {"Content-Type":"application/json"};
+  if(token) headers.Authorization = "Bearer " + token;
+  const res = await fetch("/api" + path, {...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined});
+  if(res.status === 401 && token){ logout(true); throw new Error("Session expired. Please sign in again."); }
+  let data = null;
+  const txt = await res.text();
+  if(txt){ try{ data = JSON.parse(txt) }catch{ data = null } }
+  if(!res.ok){
+    let m = data?.message || data?.title || ("Error " + res.status);
+    if(data?.errors) m = Object.values(data.errors).flat().join(" ");
+    throw new Error(m);
+  }
+  return data;
+}
+
+/* ---------- landing ---------- */
+function countUp(el, to){
+  const dur = 1100, start = performance.now();
+  const step = n => { const p = Math.min(1,(n-start)/dur); el.textContent = Math.round(to*(1-Math.pow(1-p,3))).toLocaleString(); if(p<1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+async function loadStats(){
+  try{
+    const s = await api("/stats");
+    $$("#stats b").forEach(b => countUp(b, s[b.dataset.k] ?? 0));
+  }catch{}
+}
+const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add("in")), {threshold:.15});
+$$(".reveal").forEach(el => io.observe(el));
+
+/* ---------- nav / auth ---------- */
+function renderNav(){
+  const r = $("#navR");
+  if(me){
+    r.innerHTML = `<span class="hint">${esc(me.fullName)} · <b style="color:var(--red)">${esc(me.bloodTypeLabel || "—")}</b></span><button class="btn sm" id="outBtn">Sign out</button>`;
+    $("#outBtn").onclick = () => logout();
+  }else{
+    r.innerHTML = `<button class="btn sm" onclick="openAuth('login')">Sign in</button><button class="btn primary sm" onclick="openAuth('register')">Join</button>`;
+  }
+}
+function goHome(){ if(!me) window.scrollTo({top:0,behavior:"smooth"}); else showTab("nearby"); }
+
+function closeModal(){ $("#modalRoot").innerHTML = ""; }
+function modal(html){
+  $("#modalRoot").innerHTML = `<div class="modal" id="mBg"><div class="box"><button class="x" id="mX">✕</button>${html}</div></div>`;
+  $("#mX").onclick = closeModal;
+  $("#mBg").addEventListener("mousedown", e => { if(e.target.id === "mBg") closeModal(); });
+}
+const typeOptions = (withAny) => (withAny ? `<option value="">Any</option>` : `<option value="">Select…</option>`) +
+  Object.entries(TYPES).map(([k,v]) => `<option value="${k}">${v}</option>`).join("");
+
+function openAuth(mode){
+  modal(`
+    <div class="tabs2"><button data-m="login" class="${mode==="login"?"on":""}">Sign in</button><button data-m="register" class="${mode==="register"?"on":""}">Create account</button></div>
+    <form id="authForm" class="form" style="grid-template-columns:1fr">
+      ${mode==="register" ? `
+        <div><label>Full name</label><input name="fullName" required minlength="2"></div>
+        <div><label>Phone</label><input name="phone" required placeholder="+20…"></div>
+        <div><label>City</label><input name="city" required></div>
+        <div><label>Blood type (needed to donate)</label><select name="bloodType">${typeOptions(false)}</select></div>` : ""}
+      <div><label>Email</label><input name="email" type="email" required></div>
+      <div><label>Password ${mode==="register"?"(8+ characters)":""}</label><input name="password" type="password" required minlength="${mode==="register"?8:1}"></div>
+      <button class="btn primary" id="authBtn">${mode==="login"?"Sign in":"Create account"}</button>
+      ${mode==="register" ? `<p class="hint">You can set your exact location later in Profile so we can find nearby requests.</p>` : ""}
+    </form>`);
+  $$(".tabs2 button").forEach(b => b.onclick = () => openAuth(b.dataset.m));
+  $("#authForm").onsubmit = async e => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target));
+    if(mode==="register"){ f.bloodType = f.bloodType || null; }
+    $("#authBtn").disabled = true;
+    try{
+      const res = await api(mode==="login" ? "/auth/login" : "/auth/register", {method:"POST", body:f});
+      token = res.token; store.set("bc_token", token); me = res.user;
+      closeModal(); enterApp(); toast("Welcome, " + me.fullName.split(" ")[0] + "!");
+    }catch(err){ toast(err.message, true); $("#authBtn").disabled = false; }
+  };
+}
+
+function logout(silent){
+  token = null; me = null; store.del("bc_token");
+  $("#app").classList.add("hidden"); $("#landing").classList.remove("hidden");
+  renderNav(); loadStats();
+  if(!silent) toast("Signed out");
+}
+
+async function enterApp(){
+  $("#landing").classList.add("hidden"); $("#app").classList.remove("hidden");
+  renderNav();
+  $("#fType").innerHTML = typeOptions(true);
+  $("#cType").innerHTML = typeOptions(false);
+  $("#pType").innerHTML = typeOptions(false);
+  fillProfile();
+  showTab("nearby");
+}
+
+/* ---------- tabs ---------- */
+function showTab(t){
+  $$(".tab").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  $$(".panel").forEach(p => p.classList.toggle("hidden", p.id !== "p-" + t));
+  if(t==="nearby") loadNearby();
+  if(t==="create") setTimeout(initPick, 50);
+  if(t==="mine") loadMine();
+  if(t==="pledges") loadPledges();
+  window.scrollTo({top:0});
+}
+$$(".tab").forEach(b => b.onclick = () => showTab(b.dataset.t));
+
+/* ---------- request cards ---------- */
+function card(r){
+  const pct = Math.min(100, Math.round(100 * r.unitsFulfilled / r.unitsNeeded));
+  return `<button class="rc ${esc(r.urgency)}" data-id="${r.id}">
+    <div class="bt">${esc(r.bloodTypeLabel)}</div>
+    <div>
+      <h4>${esc(r.hospital)}</h4>
+      <div class="meta"><span>${esc(r.city)}</span>${r.distanceKm!=null?`<span>${r.distanceKm} km away</span>`:""}<span class="chip ${esc(r.urgency)}">${esc(r.urgency)}</span>${r.canIDonate?`<span class="chip ok">You can donate</span>`:""}${r.status!=="Open"?`<span class="chip">${esc(r.status)}</span>`:""}</div>
+      <div class="meta"><span>${r.unitsFulfilled}/${r.unitsNeeded} units</span></div>
+      <div class="prog"><i style="width:${pct}%"></i></div>
+    </div></button>`;
+}
+function bindCards(root){ $$(".rc", root).forEach(c => c.onclick = () => openRequest(+c.dataset.id)); }
+
+/* ---------- nearby ---------- */
+function myPos(){ return (me && me.latitude!=null && me.longitude!=null) ? {lat:me.latitude, lng:me.longitude} : null; }
+
+function initMap(){
+  if(map) return;
+  map = L.map("map",{zoomControl:true}).setView([CAIRO.lat, CAIRO.lng], 11);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(map);
+}
+const pinColor = u => u==="Critical" ? "#ff3b4e" : (u==="Urgent" ? "#f59e0b" : "#6b7280");
+
+async function loadNearby(){
+  initMap(); setTimeout(() => map.invalidateSize(), 80);
+  const pos = myPos();
+  const q = new URLSearchParams({PageSize:"50"});
+  if($("#fCompat").checked && me.bloodType) q.set("CompatibleWithMe","true");
+  if($("#fType").value) q.set("BloodType", $("#fType").value);
+  if(pos){ q.set("Lat",pos.lat); q.set("Lng",pos.lng); q.set("RadiusKm",$("#fRadius").value); }
+  $("#nearInfo").textContent = pos ? "Sorted by urgency, then distance" : "Set your location in Profile to search by distance";
+  try{
+    const res = await api("/requests?" + q);
+    const list = $("#nearList");
+    list.innerHTML = res.items.length ? res.items.map(card).join("") : `<div class="empty">No open requests match right now.<br>That's good news.</div>`;
+    bindCards(list);
+    markers.forEach(m => m.remove()); markers = [];
+    const pts = [];
+    res.items.forEach(r => {
+      const icon = L.divIcon({className:"", iconSize:[30,30], iconAnchor:[15,30],
+        html:`<div class="pin" style="background:${pinColor(r.urgency)}"><span>${esc(r.bloodTypeLabel)}</span></div>`});
+      const m = L.marker([r.latitude, r.longitude], {icon}).addTo(map).on("click", () => openRequest(r.id));
+      markers.push(m); pts.push([r.latitude, r.longitude]);
+    });
+    if(pos){
+      markers.push(L.circleMarker([pos.lat,pos.lng],{radius:8,color:"#fff",weight:2,fillColor:"#34d399",fillOpacity:1}).addTo(map).bindTooltip("You"));
+      pts.push([pos.lat,pos.lng]);
+    }
+    if(pts.length) map.fitBounds(pts,{padding:[40,40],maxZoom:13});
+  }catch(err){ toast(err.message, true); }
+}
+$("#fReload").onclick = loadNearby;
+["fCompat","fRadius","fType"].forEach(id => $("#"+id).onchange = loadNearby);
+
+/* ---------- request details modal ---------- */
+async function openRequest(id){
+  try{
+    const d = await api("/requests/" + id);
+    const owner = d.matchingDonorsCount != null;
+    const pending = (d.pledges||[]).filter(p => p.status === "Pledged");
+    let actions = "";
+    if(owner){
+      actions = `<h4 style="margin-top:18px">Pledges (${(d.pledges||[]).length})</h4>` +
+        ((d.pledges||[]).length ? d.pledges.map(p => `<div class="pl"><div><b>${esc(p.donorName)}</b> ${p.donorBloodType?`· ${esc(TYPES[p.donorBloodType])}`:""}<div class="hint">${esc(p.donorPhone)} · ${esc(p.status)}</div></div>${p.status==="Pledged" && d.status==="Open" ? `<button class="btn sm primary" data-confirm="${p.id}">Confirm donated</button>`:""}</div>`).join("") : `<p class="hint">No pledges yet.</p>`) +
+        `<p class="hint" style="margin-top:12px">${d.matchingDonorsCount} eligible donor(s) are within range of this request.</p>` +
+        (d.status==="Open" ? `<button class="btn danger" id="cancelReq" style="margin-top:14px">Cancel request</button>` : "");
+    }else if(d.status !== "Open"){
+      actions = `<p class="hint">This request is ${esc(d.status.toLowerCase())}.</p>`;
+    }else if(d.myPledgeStatus === "Pledged"){
+      actions = `<p class="chip ok" style="margin-top:14px">You pledged to donate — thank you!</p><br><button class="btn danger" id="unpledge" style="margin-top:10px">Cancel my pledge</button>`;
+    }else if(d.canIDonate){
+      actions = `<button class="btn primary" id="pledge" style="margin-top:14px">I will donate</button>`;
+    }else{
+      actions = `<p class="hint">Your blood type or availability doesn't match this request. Update your profile if that's wrong.</p>`;
+    }
+    modal(`
+      <span class="chip ${esc(d.urgency)}">${esc(d.urgency)}</span>
+      <h3 style="margin-top:8px">${esc(d.bloodTypeLabel)} · ${esc(d.hospital)}</h3>
+      <p class="hint">${esc(d.city)} · asked by ${esc(d.requesterName)}</p>
+      <dl class="kv">
+        <dt>Units</dt><dd>${d.unitsFulfilled} / ${d.unitsNeeded} donated</dd>
+        <dt>Status</dt><dd>${esc(d.status)}</dd>
+        ${d.neededBy?`<dt>Needed by</dt><dd>${esc(new Date(d.neededBy).toLocaleString())}</dd>`:""}
+        ${d.patientName?`<dt>Patient</dt><dd>${esc(d.patientName)}</dd>`:""}
+        <dt>Contact</dt><dd>${d.contactPhone ? esc(d.contactPhone) : `<span class="hint">Shown after you pledge</span>`}</dd>
+        ${d.notes?`<dt>Notes</dt><dd>${esc(d.notes)}</dd>`:""}
+      </dl>
+      ${actions}`);
+    const on = (sel, fn) => { const el = $(sel); if(el) el.onclick = fn; };
+    on("#pledge", () => act(`/requests/${id}/pledge`, "POST", "Pledge saved. Please contact the family."));
+    on("#unpledge", () => act(`/requests/${id}/pledge`, "DELETE", "Pledge cancelled."));
+    on("#cancelReq", () => act(`/requests/${id}/cancel`, "POST", "Request cancelled."));
+    $$("[data-confirm]").forEach(b => b.onclick = () => act(`/requests/${id}/pledges/${b.dataset.confirm}/confirm`, "POST", "Donation confirmed."));
+  }catch(err){ toast(err.message, true); }
+}
+async function act(path, method, okMsg){
+  try{ await api(path, {method}); toast(okMsg); closeModal(); refreshCurrent(); }
+  catch(err){ toast(err.message, true); }
+}
+function refreshCurrent(){
+  const t = $(".tab.on").dataset.t;
+  if(t==="nearby") loadNearby(); if(t==="mine") loadMine(); if(t==="pledges") loadPledges();
+}
+
+/* ---------- mine / pledges ---------- */
+async function loadMine(){
+  try{
+    const items = await api("/requests/mine");
+    const el = $("#mineList");
+    el.innerHTML = items.length ? items.map(card).join("") : `<div class="empty" style="grid-column:1/-1">You haven't asked for blood yet.</div>`;
+    bindCards(el);
+  }catch(err){ toast(err.message, true); }
+}
+async function loadPledges(){
+  try{
+    const items = await api("/profile/pledges");
+    const el = $("#pledgeList");
+    el.innerHTML = items.length ? items.map(p => `<button class="rc Normal" data-id="${p.requestId}"><div class="bt">${esc(p.bloodTypeLabel)}</div><div><h4>${esc(p.hospital)}</h4><div class="meta"><span>${esc(p.city)}</span><span class="chip ${p.status==="Donated"?"ok":""}">${esc(p.status)}</span><span class="chip">Request ${esc(p.requestStatus)}</span></div></div></button>`).join("") : `<div class="empty" style="grid-column:1/-1">No pledges yet. Find a request in <b>Nearby</b>.</div>`;
+    bindCards(el);
+  }catch(err){ toast(err.message, true); }
+}
+
+/* ---------- create request ---------- */
+function setPick(lat,lng){
+  pick = {lat,lng};
+  if(pickMarker) pickMarker.setLatLng([lat,lng]); else pickMarker = L.marker([lat,lng]).addTo(pickMap);
+  $("#pickInfo").textContent = `— ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+function initPick(){
+  if(!pickMap){
+    const p = myPos() || CAIRO;
+    pickMap = L.map("pickMap").setView([p.lat,p.lng], 12);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(pickMap);
+    pickMap.on("click", e => setPick(e.latlng.lat, e.latlng.lng));
+    $("#createForm [name=contactPhone]").value = me.phone || "";
+    $("#createForm [name=city]").value = me.city || "";
+    if(myPos()) setPick(p.lat,p.lng);
+  }
+  setTimeout(() => pickMap.invalidateSize(), 80);
+}
+$("#createForm").onsubmit = async e => {
+  e.preventDefault();
+  if(!pick) return toast("Click the map to set the hospital location.", true);
+  const f = Object.fromEntries(new FormData(e.target));
+  f.unitsNeeded = +f.unitsNeeded; f.latitude = pick.lat; f.longitude = pick.lng;
+  f.neededBy = f.neededBy ? new Date(f.neededBy).toISOString() : null;
+  f.notes = f.notes || null;
+  $("#createBtn").disabled = true;
+  try{
+    const d = await api("/requests", {method:"POST", body:f});
+    toast("Request posted."); e.target.reset(); pick = null;
+    if(pickMarker){ pickMarker.remove(); pickMarker = null; } $("#pickInfo").textContent = "";
+    showTab("mine"); setTimeout(() => openRequest(d.id), 300);
+  }catch(err){ toast(err.message, true); }
+  $("#createBtn").disabled = false;
+};
+
+/* ---------- profile ---------- */
+function fillProfile(){
+  const f = $("#profileForm");
+  f.fullName.value = me.fullName; f.phone.value = me.phone; f.city.value = me.city;
+  f.bloodType.value = me.bloodType || "";
+  f.latitude.value = me.latitude ?? ""; f.longitude.value = me.longitude ?? "";
+  f.isAvailableToDonate.checked = !!me.isAvailableToDonate;
+  const last = me.lastDonationDate ? new Date(me.lastDonationDate).toLocaleDateString() : "never";
+  $("#eligLine").innerHTML = me.isEligibleToDonate
+    ? `<span class="chip ok">Eligible to donate</span> Last donation: ${esc(last)}`
+    : `<span class="chip">Not eligible right now</span> Last donation: ${esc(last)}. Set a blood type, stay available, and wait 56 days between donations.`;
+}
+$("#geoBtn").onclick = () => {
+  if(!navigator.geolocation) return toast("Geolocation isn't supported in this browser.", true);
+  navigator.geolocation.getCurrentPosition(p => {
+    const f = $("#profileForm"); f.latitude.value = p.coords.latitude.toFixed(5); f.longitude.value = p.coords.longitude.toFixed(5);
+    toast("Location filled. Press Save changes.");
+  }, () => toast("Couldn't get your location. Allow location access or type it manually.", true), {timeout:8000});
+};
+$("#profileForm").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target;
+  const num = v => v === "" ? null : +v;
+  const body = {fullName:f.fullName.value, phone:f.phone.value, city:f.city.value,
+    bloodType:f.bloodType.value || null, latitude:num(f.latitude.value), longitude:num(f.longitude.value),
+    isAvailableToDonate:f.isAvailableToDonate.checked};
+  try{ me = await api("/profile/me", {method:"PUT", body}); renderNav(); fillProfile(); toast("Profile saved."); }
+  catch(err){ toast(err.message, true); }
+};
+
+/* ---------- boot ---------- */
+(async function boot(){
+  renderNav(); loadStats();
+  if(token){
+    try{ me = await api("/profile/me"); enterApp(); }
+    catch{ logout(true); }
+  }
+})();
+</script>
+</body>
+</html>

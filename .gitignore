@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.log
+appsettings.Development.json
+appsettings.Local.json
+.env
+EXPLAIN_AR.md
